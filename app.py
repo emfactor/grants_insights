@@ -16,7 +16,7 @@ model = load_model()
 # Load CSV data
 @st.cache_data
 def load_data():
-    return pd.read_csv("cleaned_grants_dataset.csv")
+    return pd.read_csv("grants.csv")
 
 df = load_data()
 
