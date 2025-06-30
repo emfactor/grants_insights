@@ -64,15 +64,18 @@ with st.sidebar:
 filtered_df = df[(df["Year"] == selected_year) & (df["Month"].isin(selected_months))]
 
 # Apply smart search if query exists
+# Apply smart search if query exists
 if query:
+    temp_df = filtered_df.reset_index(drop=True)
     matches = process.extract(
         query,
-        filtered_df["Text"],
+        temp_df["Text"],
         scorer=fuzz.WRatio,
         limit=100
     )
     matched_indices = [match[2] for match in matches if match[1] > 60]
-    filtered_df = filtered_df.iloc[matched_indices]
+    filtered_df = temp_df.iloc[matched_indices]
+
 
 st.write(f"### 🎁 Showing {len(filtered_df)} matching grants")
 st.dataframe(
