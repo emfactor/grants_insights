@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+from datetime import datetime
 from rapidfuzz import process, fuzz
 
 st.set_page_config(page_title="UK Grant Finder", layout="wide")
@@ -19,6 +20,7 @@ def load_data():
             return pd.DataFrame()
         df["Award Date"] = pd.to_datetime(df["Award Date"], errors='coerce')
         df["Year"] = df["Award Date"].dt.year
+        df["Month"] = df["Award Date"].dt.month
         df["Text"] = df["Grant Title"].fillna('') + ". " + df["Grant Description"].fillna('')
         return df.dropna(subset=["Award Date"])
     except FileNotFoundError:
@@ -34,17 +36,34 @@ if df.empty:
 
 with st.sidebar:
     st.header("🔍 Filter Grants")
-    query = st.text_input("Search keyword (e.g. climate, children, education)")
-    year_range = st.slider(
-        "Select Year Range",
-        min_value=int(df["Year"].min()),
-        max_value=int(df["Year"].max()),
-        value=(2015, 2024)
+    
+    # Year Dropdown
+    current_year = datetime.now().year
+    available_years = [current_year, current_year - 1]
+    selected_year = st.selectbox("Select Year", available_years, index=0)
+
+    # Month multiselect buttons
+    st.markdown("**Select Month(s)**")
+    month_names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    month_numbers = list(range(1, 13))
+    month_mapping = dict(zip(month_names, month_numbers))
+    
+    selected_month_names = st.multiselect(
+        "Month(s)",
+        options=month_names,
+        default=month_names,  # Show all months selected by default
+        label_visibility="collapsed"
     )
+    selected_months = [month_mapping[m] for m in selected_month_names]
 
-filtered_df = df[df["Year"].between(year_range[0], year_range[1])]
+    # Keyword search
+    query = st.text_input("Search keyword (e.g. children, hospice, youth)")
 
-# Apply fuzzy matching if query exists
+# Filter by year and months
+filtered_df = df[(df["Year"] == selected_year) & (df["Month"].isin(selected_months))]
+
+# Apply smart search if query exists
 if query:
     matches = process.extract(
         query,
