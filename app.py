@@ -1,78 +1,66 @@
+# app.py
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import pickle
-import gzip
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
 
-st.set_page_config(page_title="UK Charity Grant Finder", layout="wide")
+st.set_page_config(page_title="Grant Insights Finder", layout="wide")
+st.title("💸 UK Grant Insights Finder")
 
-# --- LOAD DATA & EMBEDDINGS ---
-@st.cache_data
-def load_data():
-    return pd.read_csv("grants.csv")
+# Upload CSV
+st.sidebar.header("Upload Your Grants CSV")
+uploaded_file = st.sidebar.file_uploader("Upload grants.csv", type=["csv"])
 
-@st.cache_resource
-def load_model():
-    return SentenceTransformer("all-MiniLM-L6-v2")
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
 
-@st.cache_resource
-def load_embeddings():
-with gzip.open("grant_embeddings.pkl.gz", "rb") as f:
-    grant_embeddings = pickle.load(f)
+    # Basic check
+    required_cols = ['Grant Title', 'Description of Grant']
+    if not all(col in df.columns for col in required_cols):
+        st.error("CSV must contain at least 'Grant Title' and 'Description of Grant' columns.")
+    else:
+        # Sidebar filters
+        if 'Funder' in df.columns:
+            funder_filter = st.sidebar.multiselect("Select Funders:", df['Funder'].dropna().unique())
+        else:
+            funder_filter = []
 
-df = load_data()
-model = load_model()
-grant_embeddings = load_embeddings()
+        if 'Award Year' in df.columns:
+            year_filter = st.sidebar.multiselect("Select Years:", sorted(df['Award Year'].dropna().unique()))
+        else:
+            year_filter = []
 
-# --- UI ---
-st.title("💡 UK Charity Grant Finder & Matcher")
-st.markdown("Find funding that matches your mission. Powered by AI.")
+        # Apply filters
+        filtered_df = df.copy()
+        if funder_filter:
+            filtered_df = filtered_df[filtered_df['Funder'].isin(funder_filter)]
+        if year_filter:
+            filtered_df = filtered_df[filtered_df['Award Year'].isin(year_filter)]
 
-# --- SMART MATCHING ---
-st.header("🔎 Find Relevant Grants")
+        # Search
+        st.subheader("🔍 Search for Grants")
+        query = st.text_input("Enter keywords (e.g. youth, environment, training):")
 
-user_input = st.text_input("Describe your project in 1–2 sentences")
+        if query:
+            results = filtered_df[
+                filtered_df['Grant Title'].str.contains(query, case=False, na=False) |
+                filtered_df['Description of Grant'].str.contains(query, case=False, na=False)
+            ]
+            st.markdown(f"### Top {min(len(results), 10)} Results")
+            st.dataframe(results[['Grant Title', 'Funder', 'Amount Awarded', 'Award Year', 'Description of Grant']].head(10))
+        else:
+            st.info("Enter a keyword above to search grants.")
 
-if user_input:
-    with st.spinner("Finding top grants..."):
-        input_embedding = model.encode(user_input).reshape(1, -1)
-        similarities = cosine_similarity(input_embedding, grant_embeddings)[0]
-        df["Score"] = similarities
-        top_matches = df.sort_values("Score", ascending=False).head(5)
+        # Charts
+        if 'Award Year' in filtered_df.columns and 'Amount Awarded' in filtered_df.columns:
+            st.subheader("📊 Grant Amount by Year")
+            year_chart = filtered_df.groupby('Award Year')['Amount Awarded'].sum().reset_index()
+            fig = px.bar(year_chart, x='Award Year', y='Amount Awarded', title='Total Grant Amount by Year')
+            st.plotly_chart(fig, use_container_width=True)
 
-    st.success("Top 5 matched grants")
-    st.dataframe(top_matches[["Grant Title", "Grant Description", "Amount Awarded (GBP)", "Region", "Funding Organisation"]])
-
-# --- SIDEBAR FILTERS ---
-st.sidebar.header("📍 Filters")
-regions = st.sidebar.multiselect("Filter by region", df["Region"].dropna().unique())
-funders = st.sidebar.multiselect("Filter by funder", df["Funding Organisation"].dropna().unique())
-
-filtered_df = df.copy()
-if regions:
-    filtered_df = filtered_df[filtered_df["Region"].isin(regions)]
-if funders:
-    filtered_df = filtered_df[filtered_df["Funding Organisation"].isin(funders)]
-
-# --- STATS ---
-st.subheader("📊 Grant Insights")
-col1, col2 = st.columns(2)
-col1.metric("Total Grants", f"{filtered_df.shape[0]:,}")
-col2.metric("Total Awarded", f"£{int(filtered_df['Amount Awarded (GBP)'].sum()):,}")
-
-# --- CHARTS ---
-st.subheader("📍 Funding by Region")
-region_chart = filtered_df.groupby("Region")["Amount Awarded (GBP)"].sum().reset_index()
-st.plotly_chart(px.bar(region_chart, x="Region", y="Amount Awarded (GBP)", text_auto=True), use_container_width=True)
-
-st.subheader("📅 Timeline")
-df["Award Date"] = pd.to_datetime(df["Award Date"], errors="coerce")
-filtered_df["Month"] = df["Award Date"].dt.to_period("M").astype(str)
-timeline = filtered_df.groupby("Month")["Amount Awarded (GBP)"].sum().reset_index()
-st.plotly_chart(px.line(timeline, x="Month", y="Amount Awarded (GBP)", markers=True), use_container_width=True)
-
-# --- FULL TABLE ---
-st.subheader("📋 All Matching Grants")
-st.dataframe(filtered_df, use_container_width=True)
+        if 'Funder' in filtered_df.columns and 'Amount Awarded' in filtered_df.columns:
+            st.subheader("🏢 Top Funders")
+            top_funders = filtered_df.groupby('Funder')['Amount Awarded'].sum().nlargest(10).reset_index()
+            fig2 = px.pie(top_funders, values='Amount Awarded', names='Funder', title='Top 10 Funders by Amount')
+            st.plotly_chart(fig2, use_container_width=True)
+else:
+    st.info("Upload your grants CSV using the sidebar.")
