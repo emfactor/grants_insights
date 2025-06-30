@@ -1,41 +1,58 @@
-# UK Grants Insights Dashboard
+# 🎯 UK Grant Finder Dashboard (with Smart Fuzzy Search)
 
-🎯 A simple Streamlit web app that helps non-technical users find UK grants by cause, year, and keywords. No setup required.
+A simple, smart, and fast web app to help users explore UK grant data without requiring any technical skills.
 
----
-
-## 📦 What's Included
-
-- `app.py` — the Streamlit app
-- `grants.csv` — sample data (~20k UK grant records)
-- `requirements.txt` — Streamlit + Pandas
+This app uses **fuzzy string matching** (via `rapidfuzz`) to provide intelligent search results, even if users don’t know the exact keywords. Built with `Streamlit` and hosted on the cloud, it's suitable for non-profits, data enthusiasts, and grant seekers.
 
 ---
 
-## 🚀 How to Run (No Coding Needed)
+## 🚀 Features
 
-### Option 1: Run in Streamlit Cloud
-1. Create a free account at [streamlit.io](https://streamlit.io)
-2. Fork this GitHub repo into your account
-3. Go to [share.streamlit.io](https://share.streamlit.io) and connect your GitHub
-4. Select this repo and deploy!
-
-☁️ You’ll get a public app link to share.
+- 🔍 **Fuzzy keyword search** across grant titles and descriptions
+- 🕵️‍♀️ Intelligent results even with partial or imperfect terms (e.g. _“children”_ matches _“children’s hospice”_)
+- 📅 Filter by year range
+- 📊 Instant search results with interactive table
+- 🧠 No technical skills required to use or deploy
 
 ---
 
-## 🧑‍💼 For Users
+## 🖥 Live App
 
-When the app opens:
-- Use the sidebar to filter by **keyword** (e.g. "climate", "health", "education").
-- Use the slider to choose the **year range**.
-- Matching grants will appear in a searchable, sortable table.
-
-No upload or setup required!
+> [Click here to use the live app](https://[your-streamlit-cloud-url])  
+> *(Replace this with your actual link after deploying on Streamlit Cloud)*
 
 ---
 
-## 🔐 Notes
+## 📁 Files in This Repo
 
-- All grant data is preloaded in `grants.csv`.
-- If the file is missing or broken, the app shows an error message.
+- `app.py` — Main Streamlit dashboard
+- `grants.csv` — Public UK grant data (20,000+ records)
+- `requirements.txt` — Python dependencies
+- `README.md` — This file
+
+---
+
+## 🧑‍💻 For Developers
+
+### 🧱 Requirements
+
+- Python 3.8+
+- pip
+
+### 📦 Setup & Run Locally
+
+```bash
+# 1. Clone the repo
+git clone https://github.com/your-username/grants-finder.git
+cd grants-finder
+
+# 2. Create a virtual environment (optional but recommended)
+python -m venv venv
+venv\Scripts\activate       # On Windows
+# source venv/bin/activate  # On macOS/Linux
+
+# 3. Install required libraries
+pip install -r requirements.txt
+
+# 4. Run the app
+streamlit run app.py
