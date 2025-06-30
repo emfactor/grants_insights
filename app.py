@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import pickle
+import gzip
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -18,8 +19,8 @@ def load_model():
 
 @st.cache_resource
 def load_embeddings():
-    with open("grant_embeddings.pkl", "rb") as f:
-        return pickle.load(f)
+with gzip.open("grant_embeddings.pkl.gz", "rb") as f:
+    grant_embeddings = pickle.load(f)
 
 df = load_data()
 model = load_model()
