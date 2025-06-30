@@ -1,51 +1,41 @@
-# UK Grant Insights Finder
+# UK Grants Insights Dashboard
 
-A simple Streamlit dashboard to explore and search UK grant data based on keywords, funders, and years. Useful for charities, researchers, and funding analysts.
-
-## 🔧 How to Use
-
-### 📦 Upload CSV
-
-1. Click on the sidebar and upload a CSV file.
-2. Ensure your CSV has at least these columns:
-   - `Grant Title`
-   - `Description of Grant`
-   - Optional: `Funder`, `Award Year`, `Amount Awarded`
-
-### 🔍 Search Features
-
-- Type in a keyword to find matching grants.
-- Filter by funder or award year.
-- View top 10 search results and interactive charts.
+🎯 A simple Streamlit web app that helps non-technical users find UK grants by cause, year, and keywords. No setup required.
 
 ---
 
-## 🛰️ Deploy to Streamlit Cloud
+## 📦 What's Included
 
-1. Create a free account on [Streamlit Cloud](https://streamlit.io/cloud)
-2. Upload this project (with `app.py`, `requirements.txt`, and optionally a sample CSV) to GitHub.
-3. On Streamlit Cloud, click **New App** → Select your GitHub repo → Deploy.
-
----
-
-## 📂 Example File Format
-
-| Grant Title         | Description of Grant              | Funder       | Award Year | Amount Awarded |
-|---------------------|-----------------------------------|--------------|-------------|-----------------|
-| Youth Empowerment   | Supporting youth digital skills   | ABC Foundation | 2023       | 10000          |
+- `app.py` — the Streamlit app
+- `grants.csv` — sample data (~20k UK grant records)
+- `requirements.txt` — Streamlit + Pandas
 
 ---
 
-## 🧑 For Non-Technical Users
+## 🚀 How to Run (No Coding Needed)
 
-You only need to:
-- Upload your CSV file via the sidebar.
-- Use filters and keyword search. No coding required!
+### Option 1: Run in Streamlit Cloud
+1. Create a free account at [streamlit.io](https://streamlit.io)
+2. Fork this GitHub repo into your account
+3. Go to [share.streamlit.io](https://share.streamlit.io) and connect your GitHub
+4. Select this repo and deploy!
+
+☁️ You’ll get a public app link to share.
 
 ---
 
-## 🧪 Requirements
+## 🧑‍💼 For Users
 
-- `streamlit`
-- `pandas`
-- `plotly`
+When the app opens:
+- Use the sidebar to filter by **keyword** (e.g. "climate", "health", "education").
+- Use the slider to choose the **year range**.
+- Matching grants will appear in a searchable, sortable table.
+
+No upload or setup required!
+
+---
+
+## 🔐 Notes
+
+- All grant data is preloaded in `grants.csv`.
+- If the file is missing or broken, the app shows an error message.
