@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 from rapidfuzz import process, fuzz
 
-st.set_page_config(page_title="UK Grant Finder", layout="wide")
+st.set_page_config(page_title="UK Grant Finder Dashboard", layout="wide")
 st.title("🎯 UK Grant Finder Dashboard")
 
 @st.cache_data
@@ -12,76 +12,77 @@ def load_data():
         df = pd.read_csv("grants.csv")
         required_columns = [
             "Recipient Name", "Amount Awarded (GBP)",
-            "Grant Title", "Grant Description", "Award Date", "Funding Organisation"
+            "Grant Title", "Grant Description", "Award Date",
+            "Funding Organisation"
         ]
         missing = [col for col in required_columns if col not in df.columns]
         if missing:
-            st.error(f"Missing columns: {missing}")
+            st.error(f"Missing columns in CSV: {missing}")
             return pd.DataFrame()
-        df["Award Date"] = pd.to_datetime(df["Award Date"], errors='coerce')
-        df["Year"] = df["Award Date"].dt.year
-        df["Month"] = df["Award Date"].dt.month
-        df["Text"] = df["Grant Title"].fillna('') + ". " + df["Grant Description"].fillna('')
-        return df.dropna(subset=["Award Date"])
+
+        df["Date"] = pd.to_datetime(df["Award Date"], errors='coerce')
+        df["Year"] = df["Date"].dt.year
+        df["Month"] = df["Date"].dt.strftime("%b")
+        df.dropna(subset=["Date"], inplace=True)
+
+        return df
     except FileNotFoundError:
-        st.error("❌ Error: `grants.csv` file not found in the repository.")
+        st.error("❌ Error: 'grants.csv' not found in the repo.")
         return pd.DataFrame()
     except Exception as e:
         st.error(f"❌ Failed to load data: {e}")
         return pd.DataFrame()
 
 df = load_data()
+
 if df.empty:
     st.stop()
 
+# Sidebar Filters
 with st.sidebar:
     st.header("🔍 Filter Grants")
-    
-    # Year Dropdown
-    current_year = datetime.now().year
-    available_years = [current_year, current_year - 1]
-    selected_year = st.selectbox("Select Year", available_years, index=0)
 
-    # Month multiselect buttons
-    st.markdown("**Select Month(s)**")
+    query = st.text_input("Search keyword (e.g. children, education)")
+
+    all_years = sorted(df["Year"].dropna().unique(), reverse=True)
+    year_options = ["All Years"] + [str(y) for y in all_years[:2]]
+    selected_year = st.selectbox("Select Year", year_options)
+
     month_names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-    month_numbers = list(range(1, 13))
-    month_mapping = dict(zip(month_names, month_numbers))
-    
-    selected_month_names = st.multiselect(
-        "Month(s)",
-        options=month_names,
-        default=month_names,  # Show all months selected by default
-        label_visibility="collapsed"
-    )
-    selected_months = [month_mapping[m] for m in selected_month_names]
+    selected_months = st.multiselect("Select Month(s)", month_names, default=month_names)
 
-    # Keyword search
-    query = st.text_input("Search keyword (e.g. children, hospice, youth)")
+# Filtering Logic
+filtered_df = df.copy()
 
-# Filter by year and months
-filtered_df = df[(df["Year"] == selected_year) & (df["Month"].isin(selected_months))]
+if selected_year != "All Years":
+    filtered_df = filtered_df[filtered_df["Year"] == int(selected_year)]
 
-# Apply smart search if query exists
-# Apply smart search if query exists
+filtered_df = filtered_df[filtered_df["Month"].isin(selected_months)]
+
+# Smart Fuzzy Search
 if query:
-    temp_df = filtered_df.reset_index(drop=True)
+    combined_text = filtered_df["Grant Title"].fillna("") + " " + filtered_df["Grant Description"].fillna("")
     matches = process.extract(
         query,
-        temp_df["Text"],
-        scorer=fuzz.WRatio,
+        combined_text.tolist(),
+        scorer=fuzz.token_set_ratio,
         limit=100
     )
-    matched_indices = [match[2] for match in matches if match[1] > 60]
-    filtered_df = temp_df.iloc[matched_indices]
+    matched_indices = [i for i, score in [(i, s) for (_, s, i) in matches] if score > 60]
 
+    if matched_indices:
+        filtered_df = filtered_df.iloc[matched_indices]
+    else:
+        st.warning("No close matches found. Try different keywords.")
 
-st.write(f"### 🎁 Showing {len(filtered_df)} matching grants")
+# Final Output
+st.markdown(f"### 🎁 {len(filtered_df)} grant(s) found")
 st.dataframe(
     filtered_df[[
-        "Recipient Name", "Amount Awarded (GBP)", "Grant Title",
-        "Grant Description", "Award Date", "Funding Organisation"
+        "Recipient Name", "Amount Awarded (GBP)",
+        "Grant Title", "Grant Description",
+        "Award Date", "Funding Organisation"
     ]],
     use_container_width=True
 )
