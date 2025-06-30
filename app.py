@@ -1,66 +1,44 @@
-# app.py
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 
-st.set_page_config(page_title="Grant Insights Finder", layout="wide")
-st.title("💸 UK Grant Insights Finder")
+st.set_page_config(page_title="UK Grants Finder", layout="wide")
+st.title("🎯 UK Grant Finder Dashboard")
 
-# Upload CSV
-st.sidebar.header("Upload Your Grants CSV")
-uploaded_file = st.sidebar.file_uploader("Upload grants.csv", type=["csv"])
+@st.cache_data
+def load_data():
+    try:
+        df = pd.read_csv("grants.csv")
+        required_columns = ["Recipient Org", "Amount Awarded", "Title", "Description", "Date", "Fund Name"]
+        missing = [col for col in required_columns if col not in df.columns]
+        if missing:
+            st.error(f"Missing columns: {missing}")
+            return pd.DataFrame()
+        df["Date"] = pd.to_datetime(df["Date"], errors='coerce')
+        df["Year"] = df["Date"].dt.year
+        return df
+    except FileNotFoundError:
+        st.error("❌ Error: `grants.csv` file not found in repo.")
+        return pd.DataFrame()
+    except Exception as e:
+        st.error(f"❌ Failed to load data: {e}")
+        return pd.DataFrame()
 
-if uploaded_file is not None:
-    df = pd.read_csv(uploaded_file)
+df = load_data()
 
-    # Basic check
-    required_cols = ['Grant Title', 'Description of Grant']
-    if not all(col in df.columns for col in required_cols):
-        st.error("CSV must contain at least 'Grant Title' and 'Description of Grant' columns.")
-    else:
-        # Sidebar filters
-        if 'Funder' in df.columns:
-            funder_filter = st.sidebar.multiselect("Select Funders:", df['Funder'].dropna().unique())
-        else:
-            funder_filter = []
+if df.empty:
+    st.stop()
 
-        if 'Award Year' in df.columns:
-            year_filter = st.sidebar.multiselect("Select Years:", sorted(df['Award Year'].dropna().unique()))
-        else:
-            year_filter = []
+with st.sidebar:
+    st.header("🔍 Filter Grants")
+    keyword = st.text_input("Search keyword (e.g. climate, education)")
+    year_range = st.slider("Year Range", min_value=int(df["Year"].min()), max_value=int(df["Year"].max()), value=(2015, 2024))
 
-        # Apply filters
-        filtered_df = df.copy()
-        if funder_filter:
-            filtered_df = filtered_df[filtered_df['Funder'].isin(funder_filter)]
-        if year_filter:
-            filtered_df = filtered_df[filtered_df['Award Year'].isin(year_filter)]
+filtered_df = df[df["Year"].between(year_range[0], year_range[1])]
+if keyword:
+    filtered_df = filtered_df[
+        df["Title"].str.contains(keyword, case=False, na=False) |
+        df["Description"].str.contains(keyword, case=False, na=False)
+    ]
 
-        # Search
-        st.subheader("🔍 Search for Grants")
-        query = st.text_input("Enter keywords (e.g. youth, environment, training):")
-
-        if query:
-            results = filtered_df[
-                filtered_df['Grant Title'].str.contains(query, case=False, na=False) |
-                filtered_df['Description of Grant'].str.contains(query, case=False, na=False)
-            ]
-            st.markdown(f"### Top {min(len(results), 10)} Results")
-            st.dataframe(results[['Grant Title', 'Funder', 'Amount Awarded', 'Award Year', 'Description of Grant']].head(10))
-        else:
-            st.info("Enter a keyword above to search grants.")
-
-        # Charts
-        if 'Award Year' in filtered_df.columns and 'Amount Awarded' in filtered_df.columns:
-            st.subheader("📊 Grant Amount by Year")
-            year_chart = filtered_df.groupby('Award Year')['Amount Awarded'].sum().reset_index()
-            fig = px.bar(year_chart, x='Award Year', y='Amount Awarded', title='Total Grant Amount by Year')
-            st.plotly_chart(fig, use_container_width=True)
-
-        if 'Funder' in filtered_df.columns and 'Amount Awarded' in filtered_df.columns:
-            st.subheader("🏢 Top Funders")
-            top_funders = filtered_df.groupby('Funder')['Amount Awarded'].sum().nlargest(10).reset_index()
-            fig2 = px.pie(top_funders, values='Amount Awarded', names='Funder', title='Top 10 Funders by Amount')
-            st.plotly_chart(fig2, use_container_width=True)
-else:
-    st.info("Upload your grants CSV using the sidebar.")
+st.write(f"### 🎁 Showing {len(filtered_df)} matching grants")
+st.dataframe(filtered_df[["Title", "Recipient Org", "Amount Awarded", "Date", "Fund Name", "Description"]], use_container_width=True)
