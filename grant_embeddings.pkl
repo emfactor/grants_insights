@@ -3,7 +3,7 @@ from sentence_transformers import SentenceTransformer
 import pickle
 
 # Load your cleaned CSV
-df = pd.read_csv("cleaned_grants_dataset.csv")
+df = pd.read_csv("grants.csv")
 
 # Combine relevant text for matching
 grant_texts = (df["Grant Title"].fillna('') + " " + df["Grant Description"].fillna('')).tolist()
