@@ -8,7 +8,7 @@ st.title("🎯 UK Grant Finder Dashboard")
 def load_data():
     try:
         df = pd.read_csv("grants.csv")
-        required_columns = ["Recipient Name", "Amount Awarded", "Grant Title", "Description of Grant", "Award Date", "Funding Organisation"]
+        required_columns = ["Recipient Name", "Amount Awarded (GBP)", "Grant Title", "Grant Description", "Award Date", "Funding Organisation"]
         missing = [col for col in required_columns if col not in df.columns]
         if missing:
             st.error(f"Missing columns: {missing}")
