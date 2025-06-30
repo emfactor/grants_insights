@@ -8,13 +8,13 @@ st.title("🎯 UK Grant Finder Dashboard")
 def load_data():
     try:
         df = pd.read_csv("grants.csv")
-        required_columns = ["Recipient Org", "Amount Awarded", "Title", "Description", "Date", "Fund Name"]
+        required_columns = ["Recipient Name", "Amount Awarded", "Grant Title", "Description of Grant", "Award Date", "Funding Organisation"]
         missing = [col for col in required_columns if col not in df.columns]
         if missing:
             st.error(f"Missing columns: {missing}")
             return pd.DataFrame()
-        df["Date"] = pd.to_datetime(df["Date"], errors='coerce')
-        df["Year"] = df["Date"].dt.year
+        df["Date"] = pd.to_datetime(df["Award Date"], errors='coerce')
+        df["Year"] = df["Award Date"].dt.year
         return df
     except FileNotFoundError:
         st.error("❌ Error: `grants.csv` file not found in repo.")
@@ -36,9 +36,9 @@ with st.sidebar:
 filtered_df = df[df["Year"].between(year_range[0], year_range[1])]
 if keyword:
     filtered_df = filtered_df[
-        df["Title"].str.contains(keyword, case=False, na=False) |
+        df["GTitle"].str.contains(keyword, case=False, na=False) |
         df["Description"].str.contains(keyword, case=False, na=False)
     ]
 
 st.write(f"### 🎁 Showing {len(filtered_df)} matching grants")
-st.dataframe(filtered_df[["Title", "Recipient Org", "Amount Awarded", "Date", "Fund Name", "Description"]], use_container_width=True)
+st.dataframe(filtered_df[["Recipient Name", "Amount Awarded", "Grant Title", "Description of Grant", "Award Date", "Funding Organisation"]], use_container_width=True)
