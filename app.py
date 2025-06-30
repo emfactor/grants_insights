@@ -5,30 +5,27 @@ from rapidfuzz import process, fuzz
 st.set_page_config(page_title="UK Grant Finder", layout="wide")
 st.title("🎯 UK Grant Finder Dashboard")
 
-# Load Data
 @st.cache_data
 def load_data():
     try:
         df = pd.read_csv("grants.csv")
         required_columns = [
-            "Recipient Name",
-            "Amount Awarded (GBP)",
-            "Grant Title",
-            "Grant Description",
-            "Award Date",
-            "Funding Organisation",
+            "Recipient Name", "Amount Awarded (GBP)", "Grant Title",
+            "Grant Description", "Award Date", "Funding Organisation"
         ]
         missing = [col for col in required_columns if col not in df.columns]
         if missing:
             st.error(f"❌ Missing columns: {missing}")
             return pd.DataFrame()
+
+        # Clean and parse dates
         df["Date"] = pd.to_datetime(df["Award Date"], errors="coerce")
-        df["Year"] = df["Date"].dt.year
+        df = df.dropna(subset=["Date"]).copy()  # Drop rows without valid dates
+
+        df["Year"] = df["Date"].dt.year.astype(int)
         df["Month"] = df["Date"].dt.strftime("%b")
-        return df.dropna(subset=["Date"])
-    except FileNotFoundError:
-        st.error("❌ Error: `grants.csv` file not found in repo.")
-        return pd.DataFrame()
+        return df
+
     except Exception as e:
         st.error(f"❌ Failed to load data: {e}")
         return pd.DataFrame()
@@ -43,7 +40,7 @@ with st.sidebar:
 
     query = st.text_input("Search keyword (e.g. children, environment)")
 
-    # Year filter with "All Years"
+    # Year dropdown with All option
     all_years = sorted(df["Year"].dropna().unique(), reverse=True)
     year_options = ["All Years"] + [str(y) for y in all_years[:2]]
     selected_year = st.selectbox("Select Year", year_options)
@@ -53,16 +50,19 @@ with st.sidebar:
                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
     selected_months = st.multiselect("Select Months", month_names, default=month_names)
 
-# Filter by Year
-if selected_year != "All Years":
-    filtered_df = df[df["Year"] == int(selected_year)].copy()
-else:
-    filtered_df = df.copy()
+# --- Apply Filters ---
+filtered_df = df.copy()
 
-# Filter by Months
+if selected_year != "All Years":
+    try:
+        filtered_df = filtered_df[filtered_df["Year"] == int(selected_year)]
+    except ValueError:
+        st.warning("Invalid year selected.")
+        st.stop()
+
 filtered_df = filtered_df[filtered_df["Month"].isin(selected_months)]
 
-# Smart fuzzy search
+# --- Smart Fuzzy Search ---
 if query:
     combined_text = (filtered_df["Grant Title"].fillna('') + " " +
                      filtered_df["Grant Description"].fillna('')).tolist()
@@ -75,7 +75,7 @@ if query:
     else:
         filtered_df = pd.DataFrame()
 
-# Show Results
+# --- Show Results ---
 st.write(f"### 🎁 Showing {len(filtered_df)} matching grants")
 
 if not filtered_df.empty:
@@ -92,4 +92,4 @@ if not filtered_df.empty:
         hide_index=True
     )
 else:
-    st.warning("No matching grants found.")
+    st.warning("No matching grants found. Try changing filters or search term.")
